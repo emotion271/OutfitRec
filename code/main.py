@@ -16,13 +16,13 @@ my_config = {
     #"visual_features_dict": "E:/data/iqon/GPBPRcode/feat/visualfeatures",
     #"textural_idx_dict": "E:/data/iqon/GPBPRcode/feat/textfeatures",
     #"textural_embedding_matrix": "E:/data/iqon/GPBPRcode/feat/smallnwjc2vec"
-    "visual_features_dict": "../visual_features.pkl",
-    "textural_features_dict": "../item_textfeature.pkl",
-    "outfit_item_dict": "../dmr/outfit_item_new_20.pkl",
-    "user_idx_dict": "../dmr/user_idx.pkl",
+    "visual_features_dict": "../data/visual_features_sample.pkl",
+    "textural_features_dict": "../data/text_features_sample.pkl",
+    "outfit_item_dict": "../data/outfit_item_sample.pkl",
+    "user_idx_dict": "../data/user_idx.pkl",
     #"textural_embedding_matrix": "smallnwjc2vec",
     "model_file": r"./model/dmr111.model",
-    "outfit_len_dict": "../dmr/outfit_len.pkl"
+    "outfit_len_dict": "../data/outfit_len.pkl"
 }
 
 def load_embedding_weight(device):
