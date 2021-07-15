@@ -71,7 +71,7 @@ class TestDataset(Dataset):
         self.outfit_len = outfit_len
         self.len = train.shape[0]
 
-    def __getitem__(self, item):
+    def __getitem__(self, index):
         feature = self.x_data[index]
         target = self.y_data[index]
         visual_features = self.visual_features
