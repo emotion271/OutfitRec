@@ -9,7 +9,17 @@ from torch.optim import Adam
 from torch.nn.init import uniform_
 
 
-class DmrFcnAttention(Module):
+class PrintLayer(nn.Module):
+    def __init__(self):
+        super(PrintLayer, self).__init__()
+
+    def forward(self, x):
+        print(x.shape)
+        print(x)
+        return x
+
+
+class DmrFcnAttention(nn.Module):
     def __init__(self, eb_size=128):
         super(DmrFcnAttention, self).__init__()
         self.eb_size = eb_size
@@ -59,7 +69,7 @@ class DmrFcnAttention(Module):
         return output, scores, scores_no_softmax
 
 
-class ItemAttention(Module):
+class ItemAttention(nn.Module):
     def __init__(self, eb_size=128):
         super(ItemAttention, self).__init__()
         self.eb_size = eb_size
@@ -98,12 +108,16 @@ class ItemAttention(Module):
             #np.save('cate_weight.npy',weight)
         #print(score.size())
         output = torch.matmul(score_norm, his_outfit_encode)
+        #feat = output.data.cpu().numpy()
+        #if feat.shape[1] == 50:
+            #np.save('feat_norm.npy', feat)
         #print(output.size())
         #assert (0>1)
 
         return output
 
-class ItemAttention_nouser(Module):
+
+class ItemAttention_nouser(nn.Module):
     def __init__(self, eb_size=128):
         super(ItemAttention_nouser, self).__init__()
         self.eb_size = eb_size
@@ -122,7 +136,54 @@ class ItemAttention_nouser(Module):
         return output
 
 
-class DMR(Module):
+class GetVisual(nn.Module):
+    def __init__(self, eb_size=128):
+        super(GetVisual, self).__init__()
+        self.eb_size = eb_size
+        self.visual_nn = nn.Sequential(
+            #PrintLayer(),
+            nn.Linear(2048, 512),
+            #PrintLayer(),
+            nn.BatchNorm1d(512),
+            #PrintLayer(),
+            nn.Sigmoid(),
+            #PrintLayer(),
+            nn.Linear(512, self.eb_size),
+            nn.BatchNorm1d(self.eb_size),
+            #PrintLayer(),
+            nn.Sigmoid()
+            #PrintLayer()
+        )
+
+    def forward(self, x, outfit_mask):
+        l = x.size()[1]
+        x = x.reshape(-1, 2048)
+        x = self.visual_nn(x).reshape(-1, l, 20, self.eb_size)
+        outfit_mask = outfit_mask.unsqueeze(-1)
+        out = x * outfit_mask
+        return out
+
+
+class GetText(nn.Module):
+    def __init__(self, eb_size=128):
+        super(GetText, self).__init__()
+        self.eb_size = eb_size
+        self.text_nn = nn.Sequential(
+            nn.Linear(300, self.eb_size),
+            nn.BatchNorm1d(self.eb_size),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x, outfit_mask):
+        l = x.size()[1]
+        x = x.reshape(-1, 300)
+        x = self.text_nn(x).reshape(-1, l, 20, self.eb_size)
+        outfit_mask = outfit_mask.unsqueeze(-1)
+        out = x * outfit_mask
+        return out
+
+
+class DMR(nn.Module):
     def __init__(self, batch_size,
                  visual_feature_dim=2048,
                  eb_size=128):
@@ -135,17 +196,8 @@ class DMR(Module):
         self.user_eb = nn.Embedding(3570, 32)
         self.cate_eb = nn.Embedding(46, 8)
 
-        self.visual_nn = nn.Sequential(
-            nn.Linear(visual_feature_dim, 512),
-            nn.Sigmoid(),
-            nn.Linear(512, self.eb_size),
-            nn.Sigmoid()
-        )
-
-        self.text_nn = nn.Sequential(
-            nn.Linear(300, self.eb_size),
-            nn.Sigmoid()
-        )
+        self.visual = GetVisual()
+        self.text = GetText()
 
         self.dmr_fcn_attention = DmrFcnAttention(self.eb_size)
         self.item_attention = ItemAttention(self.eb_size)
@@ -175,6 +227,8 @@ class DMR(Module):
 
         #print(his_outfit_cate.size())
         #print(outfit_cate.size())
+        #print(outfit_his_mask.size())
+        #print(outfit_mask.size())
 
         his_outfit_cate.reshape(-1, 1)
         his_outfit_cate_dm = self.cate_eb(his_outfit_cate).reshape(-1, 50, 20, 8)
@@ -190,6 +244,8 @@ class DMR(Module):
         #print(user_id.size())
         #print(user_id)
         #print(his_outfit_text.size())
+
+        '''
         his_outfit_text.reshape(-1, 300)
         his_outfit_text_dm = self.text_nn(his_outfit_text).reshape(-1, 50, 20, self.eb_size)
         his_outfit_visual.reshape(-1, 2048)
@@ -198,6 +254,15 @@ class DMR(Module):
         outfit_text_dm = self.text_nn(outfit_text).reshape(-1, 1, 20, self.eb_size)
         outfit_visual.reshape(-1, 2048)
         outfit_visual_dm = self.visual_nn(outfit_visual).reshape(-1, 1, 20, self.eb_size)
+        '''
+
+        his_outfit_text_dm = self.text(his_outfit_text, outfit_his_mask)
+        his_outfit_visual_dm = self.visual(his_outfit_visual, outfit_his_mask)
+        outfit_text_dm = self.text(outfit_text, outfit_mask)
+        outfit_visual_dm = self.visual(outfit_visual, outfit_mask)
+
+        #print(outfit_visual)
+        #print(outfit_visual_dm)
 
         #outfit_text = outfit_text.squeeze(1)
         #outfit_visual = outfit_visual.squeeze(1)

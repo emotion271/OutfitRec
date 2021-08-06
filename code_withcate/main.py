@@ -24,7 +24,7 @@ my_config = {
     "user_idx_dict": "../dmr/user_idx.pkl",
     "item_cate_dict": "../process/cate.npy",
     #"textural_embedding_matrix": "smallnwjc2vec",
-    "model_file": r"./model_save/dmr14.model",
+    "model_file": r"./model_save/dmr119.model",
     "outfit_len_dict": "../dmr/outfit_len.pkl"
 }
 
@@ -48,6 +48,32 @@ class SigLoss(nn.Module):
         loss = p*-torch.log(out+1e-8) + (1-p)*-torch.log(1-out+1e-8)
         loss = loss.mean()
         return loss
+
+'''
+def Encoder(feature, outfit_item, text_features, visual_features, outfit_len):
+    his_outfit  = feature[:, :50]
+    mask = feature[:, 50:100]
+    outfit = feature[:, 100:101]
+    uid = feature[:, 101:102]
+
+    his_outfit_text = cat([cat([cat([torch.Tensor(text_features[items]).unsqueeze(0).unsqueeze(0) if items in text_features.keys() else torch.zeros(300).unsqueeze(0) for items in outfit_item[outfit.item()]], 1) for outfit in I], 0).unsqueeze(0) for I in his_outfit], 0)
+    his_outfit_visual = cat([cat([cat([torch.Tensor(visual_features[items]).unsqueeze(0) if items in visual_features.keys() else torch.zeros((1, 2048)).unsqueeze(0) for items in outfit_item[outfit.item()]], 1) for outfit in I], 0).unsqueeze(0) for I in his_outfit], 0)
+    outfit_text = cat([cat([cat([torch.Tensor(text_features[items]).unsqueeze(0).unsqueeze(0) if items in text_features.keys() else torch.zeros(300).unsqueeze(0) for items in outfit_item[outfit.item()]], 1) for outfit in I], 0).unsqueeze(0) for I in outfit], 0)
+    outfit_visual = cat([cat([cat([torch.Tensor(visual_features[items]).unsqueeze(0) if items in visual_features.keys() else torch.zeros((1, 2048)).unsqueeze(0) for items in outfit_item[outfit.item()]], 1) for outfit in I], 0).unsqueeze(0) for I in outfit], 0)
+    #(his_outfit_text.size())
+    #print(his_outfit_visual.size())
+    #print(outfit_text.size())
+    #print(outfit_visual.size())
+    # assert(0>1)
+
+    outfit_his_mask = cat([cat([torch.Tensor([1]*outfit_len[outfit.item()]+[0]*(20-outfit_len[outfit.item()])).unsqueeze(0) for outfit in I], 0).unsqueeze(0) for I in his_outfit], 0)
+    outfit_mask = cat([cat([torch.Tensor([1] * outfit_len[outfit.item()] + [0] * (20 - outfit_len[outfit.item()])).unsqueeze(0) for outfit in I], 0).unsqueeze(0) for I in outfit], 0)
+    #print(outfit_mask)
+
+    return his_outfit_text, his_outfit_visual, mask, outfit_text, outfit_visual, uid, outfit_his_mask, outfit_mask
+'''
+
+
 
 
 def trainning(model, train_data_loader, device, user_idx, opt):
@@ -175,12 +201,16 @@ def F(batch_size, eb_size, device):
     print('load t finish')
     '''
 
-    visual_features = preprocessing.normalize(np.load(my_config['visual_features_dict']).reshape(-1, 2048), norm='l2')
-    visual_features = visual_features.reshape(-1, 1, 2048)
+    #visual_features = preprocessing.normalize(np.load(my_config['visual_features_dict']).reshape(-1, 2048), norm='l2')
+    #visual_features = visual_features.reshape(-1, 1, 2048)
+    visual_features = np.load(my_config['visual_features_dict'])
+    #print(visual_features[1])
     print('load v finish')
 
-    text_features = preprocessing.normalize(np.load(my_config['textural_features_dict']), norm='l2')
+    #text_features = preprocessing.normalize(np.load(my_config['textural_features_dict']), norm='l2')
+    text_features = np.load(my_config['textural_features_dict'])
     print('load t finish')
+    #print(text_features[10])
 
     item_cate = np.load(my_config['item_cate_dict'])
     print('load cate finish')
@@ -253,8 +283,17 @@ def F(batch_size, eb_size, device):
 if __name__ == "__main__":
 
     # "cpu" or "cuda:x" x is GPU index like (0,1,2,3,)
+    import os
+    # try:
+        # os.mkdir('./model1')
+    # except Exception: pass
     F(batch_size = 256, eb_size = 128, device = 'cuda:2')
-    print('finish')
+    #file = open("C:/Users/QiTianM425/Desktop/test/test.txt", 'a')
+    #a = [0.1651, 0.165165, 0.16156, 0.516165]
+    #np_a = np.array(a)
+    #file.write('\n'.join(str(a)))
+    #file.close()
+    print('ffff')
 
 
 
