@@ -23,14 +23,20 @@ class DmrFcnAttention(nn.Module):
     def __init__(self, eb_size=128):
         super(DmrFcnAttention, self).__init__()
         self.eb_size = eb_size
-        self.fc1 = nn.Linear(self.eb_size*2+8, self.eb_size*2+8)
-        self.prelu = nn.PReLU()
+        #self.fc1 = nn.Linear(self.eb_size*2+8, self.eb_size*2+8)
+        #self.prelu = nn.PReLU()
         self.att = nn.Sequential(nn.BatchNorm1d(50),
-                                 nn.Linear(self.eb_size*8+32,256),#80
+                                 nn.Dropout(0.2),
+                                 nn.Linear(self.eb_size*8+32, 256),#80
+                                 nn.BatchNorm1d(50),
                                  nn.Sigmoid(),
+                                 nn.Dropout(0.2),
                                  nn.Linear(256, 40),
+                                 nn.BatchNorm1d(50),
                                  nn.Sigmoid(),
-                                 nn.Linear(40, 1)
+                                 nn.Linear(40, 1),
+                                 nn.BatchNorm1d(50),
+                                 nn.Sigmoid()
 
         )
 
@@ -47,8 +53,8 @@ class DmrFcnAttention(nn.Module):
         #print(item_eb_tile.size())
         query = item_eb_tile
         #print(query.size())
-        query = self.fc1(query)
-        query = self.prelu(query)
+        #query = self.fc1(query)
+        #query = self.prelu(query)
         dmr_all = cat([query, item_his_eb, query-item_his_eb, query*item_his_eb], -1)
         #print(dmr_all.size())
         atten = self.att(dmr_all)
@@ -61,7 +67,7 @@ class DmrFcnAttention(nn.Module):
         scores = torch.where(key_masks, scores, paddings)
         scores_no_softmax = torch.where(key_masks, scores, paddings_no_softmax)
 
-        scores = F.softmax(scores, dim=1)
+        scores = F.softmax(scores, dim=-1)
 
         output = torch.matmul(scores, item_his_eb)
         output = torch.sum(output, 1)
@@ -73,10 +79,12 @@ class ItemAttention(nn.Module):
     def __init__(self, eb_size=128):
         super(ItemAttention, self).__init__()
         self.eb_size = eb_size
-        self.att = nn.Sequential(nn.BatchNorm1d(20),
+        self.att = nn.Sequential(#nn.BatchNorm1d(20),
                                  nn.Linear(self.eb_size*2+32+8, 32),
+                                 #nn.BatchNorm1d(20),
                                  nn.Sigmoid(),
                                  nn.Linear(32, 1),
+                                 #nn.BatchNorm1d(20),
                                  nn.Sigmoid())
         self.attn_dropout = nn.Dropout(0.2)
 
@@ -141,18 +149,24 @@ class GetVisual(nn.Module):
         super(GetVisual, self).__init__()
         self.eb_size = eb_size
         self.visual_nn = nn.Sequential(
-            #PrintLayer(),
+            # PrintLayer(),
+            # nn.BatchNorm1d(2048),
+            nn.Dropout(),
+            # PrintLayer(),
             nn.Linear(2048, 512),
-            #PrintLayer(),
-            nn.BatchNorm1d(512),
-            #PrintLayer(),
-            nn.Sigmoid(),
-            #PrintLayer(),
-            nn.Linear(512, self.eb_size),
-            nn.BatchNorm1d(self.eb_size),
-            #PrintLayer(),
-            nn.Sigmoid()
-            #PrintLayer()
+            # PrintLayer(),
+            # nn.BatchNorm1d(512),
+            # PrintLayer(),
+            nn.ReLU(),
+            # PrintLayer(),
+            nn.Dropout(),
+            # PrintLayer(),
+            nn.Linear(512, self.eb_size, bias=False),
+            # PrintLayer()
+            nn.BatchNorm1d(self.eb_size)
+            # PrintLayer(),
+            # nn.Sigmoid(),
+            # PrintLayer()
         )
 
     def forward(self, x, outfit_mask):
@@ -169,9 +183,13 @@ class GetText(nn.Module):
         super(GetText, self).__init__()
         self.eb_size = eb_size
         self.text_nn = nn.Sequential(
-            nn.Linear(300, self.eb_size),
-            nn.BatchNorm1d(self.eb_size),
-            nn.Sigmoid()
+            # nn.BatchNorm1d(300),
+            nn.Linear(300, 512),
+            nn.ReLU(),
+            nn.Dropout(),
+            nn.Linear(512, self.eb_size, bias=False),
+            nn.BatchNorm1d(self.eb_size)
+            # nn.Sigmoid()
         )
 
     def forward(self, x, outfit_mask):
@@ -204,21 +222,29 @@ class DMR(nn.Module):
 
         self.fc1 = nn.Sequential(
             nn.Linear(self.eb_size*2+8, 64),
+            #nn.BatchNorm1d(64),
             nn.Sigmoid()
         )
         self.fc2 = nn.Sequential(
             nn.Linear(self.eb_size*2+8, 64),
+            #nn.BatchNorm1d(64),
             nn.Sigmoid()
         )
 
         self.build_fcn_net = nn.Sequential(
-            nn.BatchNorm1d(self.eb_size*6 + 65 + 24),
-            nn.Linear(self.eb_size*6 + 65 + 24, 256),
+            # PrintLayer(),
+            nn.BatchNorm1d(self.eb_size * 6 + 65 + 24),
+            # PrintLayer(),
+            nn.Linear(self.eb_size * 6 + 65 + 24, 256),
+            # PrintLayer(),
             nn.PReLU(),
             nn.Linear(256, 128),
+            # PrintLayer(),
             nn.PReLU(),
             nn.Linear(128, 1),
+            # PrintLayer(),
             nn.Sigmoid()
+            # PrintLayer()
         )
 
     def forward(self, his_outfit_text, his_outfit_visual, mask, outfit_text, outfit_visual, uid, user_idx, outfit_his_mask, outfit_mask, his_outfit_cate, outfit_cate):
@@ -261,23 +287,6 @@ class DMR(nn.Module):
         outfit_text_dm = self.text(outfit_text, outfit_mask)
         outfit_visual_dm = self.visual(outfit_visual, outfit_mask)
 
-        #print(outfit_visual)
-        #print(outfit_visual_dm)
-
-        #outfit_text = outfit_text.squeeze(1)
-        #outfit_visual = outfit_visual.squeeze(1)
-        #outfit_text_dm = self.text_nn(outfit_text).unsqueeze(1)
-        #outfit_visual_dm = self.visual_nn(outfit_visual).unsqueeze(1)
-
-        '''
-        his_outfit_visual_dm = self.visual_nn(his_outfit_visual)
-        outfit_text_dm = self.text_nn(outfit_text)
-        outfit_visual_dm = self.visual_nn(outfit_visual)
-        '''
-        #print(his_outfit_text_dm.size())
-        #print(his_outfit_visual_dm.size())
-        #print(outfit_text_dm.size())
-        #print(outfit_visual_dm.size())
         his_outfit_encode = cat([his_outfit_text_dm, his_outfit_visual_dm, his_outfit_cate_dm], -1)
         outfit_encode = cat([outfit_text_dm, outfit_visual_dm, outfit_cate_dm], -1)
         #print(his_outfit_encode.size())

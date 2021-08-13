@@ -24,9 +24,10 @@ my_config = {
     "user_idx_dict": "../dmr/user_idx.pkl",
     "item_cate_dict": "../process/cate.npy",
     #"textural_embedding_matrix": "smallnwjc2vec",
-    "model_file": r"./model_save/dmr119.model",
+    "model_file": r"./model_save/dmr24.model",
     "outfit_len_dict": "../dmr/outfit_len.pkl"
 }
+
 
 def load_embedding_weight(device):
     jap2vec = torch.load(my_config['textural_embedding_matrix'])
@@ -48,32 +49,6 @@ class SigLoss(nn.Module):
         loss = p*-torch.log(out+1e-8) + (1-p)*-torch.log(1-out+1e-8)
         loss = loss.mean()
         return loss
-
-'''
-def Encoder(feature, outfit_item, text_features, visual_features, outfit_len):
-    his_outfit  = feature[:, :50]
-    mask = feature[:, 50:100]
-    outfit = feature[:, 100:101]
-    uid = feature[:, 101:102]
-
-    his_outfit_text = cat([cat([cat([torch.Tensor(text_features[items]).unsqueeze(0).unsqueeze(0) if items in text_features.keys() else torch.zeros(300).unsqueeze(0) for items in outfit_item[outfit.item()]], 1) for outfit in I], 0).unsqueeze(0) for I in his_outfit], 0)
-    his_outfit_visual = cat([cat([cat([torch.Tensor(visual_features[items]).unsqueeze(0) if items in visual_features.keys() else torch.zeros((1, 2048)).unsqueeze(0) for items in outfit_item[outfit.item()]], 1) for outfit in I], 0).unsqueeze(0) for I in his_outfit], 0)
-    outfit_text = cat([cat([cat([torch.Tensor(text_features[items]).unsqueeze(0).unsqueeze(0) if items in text_features.keys() else torch.zeros(300).unsqueeze(0) for items in outfit_item[outfit.item()]], 1) for outfit in I], 0).unsqueeze(0) for I in outfit], 0)
-    outfit_visual = cat([cat([cat([torch.Tensor(visual_features[items]).unsqueeze(0) if items in visual_features.keys() else torch.zeros((1, 2048)).unsqueeze(0) for items in outfit_item[outfit.item()]], 1) for outfit in I], 0).unsqueeze(0) for I in outfit], 0)
-    #(his_outfit_text.size())
-    #print(his_outfit_visual.size())
-    #print(outfit_text.size())
-    #print(outfit_visual.size())
-    # assert(0>1)
-
-    outfit_his_mask = cat([cat([torch.Tensor([1]*outfit_len[outfit.item()]+[0]*(20-outfit_len[outfit.item()])).unsqueeze(0) for outfit in I], 0).unsqueeze(0) for I in his_outfit], 0)
-    outfit_mask = cat([cat([torch.Tensor([1] * outfit_len[outfit.item()] + [0] * (20 - outfit_len[outfit.item()])).unsqueeze(0) for outfit in I], 0).unsqueeze(0) for I in outfit], 0)
-    #print(outfit_mask)
-
-    return his_outfit_text, his_outfit_visual, mask, outfit_text, outfit_visual, uid, outfit_his_mask, outfit_mask
-'''
-
-
 
 
 def trainning(model, train_data_loader, device, user_idx, opt):
@@ -247,7 +222,7 @@ def F(batch_size, eb_size, device):
     opt = Adam([
         {
             'params': dmr.parameters(),
-            'lr': 0.005,
+            'lr': 0.01,
         }
     ])
 
@@ -255,7 +230,8 @@ def F(batch_size, eb_size, device):
     #file2 = open('./res/auc_train', 'a')
     #file3 = open('./res/loss_test', 'a')
     #file4 = open('./res/auc_test', 'a')
-    for i in range(20):
+    all_auc = []
+    for i in range(30):
         # 这里是单个进程的训练
         print("training---------------")
         print("epoch:", i)
@@ -271,6 +247,8 @@ def F(batch_size, eb_size, device):
 
         loss, auc = evaluating(dmr, test_loader, device, user_idx)
         print("evaluating: epoch:", i, "loss:", loss, "test_auc:", auc)
+        all_auc.append(auc)
+        print(all_auc)
         #file3.write(str(loss)+'\n')
         #file4.write(str(auc)+'\n')
 
@@ -287,7 +265,7 @@ if __name__ == "__main__":
     # try:
         # os.mkdir('./model1')
     # except Exception: pass
-    F(batch_size = 256, eb_size = 128, device = 'cuda:2')
+    F(batch_size = 128, eb_size = 128, device = 'cuda:2')
     #file = open("C:/Users/QiTianM425/Desktop/test/test.txt", 'a')
     #a = [0.1651, 0.165165, 0.16156, 0.516165]
     #np_a = np.array(a)
