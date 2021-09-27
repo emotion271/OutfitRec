@@ -26,13 +26,13 @@ class DmrFcnAttention(Module):
         self.att = nn.Sequential(#PrintLayer(),
                                  nn.BatchNorm1d(50),
                                  #PrintLayer(),
-                                 nn.Dropout(0.2),
+                                 nn.Dropout(),
                                  nn.Linear(self.eb_size*8, 256),
                                  #PrintLayer(),
                                  nn.BatchNorm1d(50),
                                  #PrintLayer(),
                                  nn.Sigmoid(),
-                                 nn.Dropout(0.2),
+                                 nn.Dropout(),
                                  #PrintLayer(),
                                  nn.Linear(256, 1)
 
@@ -135,9 +135,9 @@ class DMR(Module):
 
         self.build_fcn_net = nn.Sequential(
             #PrintLayer(),
-            nn.BatchNorm1d(self.eb_size*6 + 65),
+            nn.BatchNorm1d(self.eb_size*6 + 65 + 16),
             #PrintLayer(),
-            nn.Linear(self.eb_size*6 + 65, 256),
+            nn.Linear(self.eb_size*6 + 65 + 16, 256),
             #PrintLayer(),
             nn.PReLU(),
             nn.Linear(256, 128),
@@ -196,7 +196,7 @@ class DMR(Module):
         user_dm_eb = self.fc1(his_outfit_dm_sum)
         outfit_dm_eb = self.fc2(outfit_dm)
 
-        inp = torch.cat([outfit_dm, att_outputs, rel_i2i, his_outfit_dm_sum, outfit_dm_eb*user_dm_eb], -1)
+        inp = torch.cat([outfit_dm, att_outputs, rel_i2i, his_outfit_dm_sum, outfit_dm_eb*user_dm_eb, user_latent], -1)
         # print(inp.size())
         x = self.build_fcn_net(inp)
         # print(x)
