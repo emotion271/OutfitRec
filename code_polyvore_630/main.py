@@ -17,7 +17,7 @@ my_config = {
     "model_file": r"./model_save_sgd/dmr19.model"
 }
 
-device_ids = [1, 2, 3]
+device_ids = [0, 1, 2, 3]
 
 
 def to_device(data, device):
@@ -72,12 +72,12 @@ def trainning(model, train_data_loader, device, opt):
         for p, t in zip(prob_1, target_1):
             stored_arr.append([p, t])
 
-        if(iteration % 10) == 0:
+        if(iteration % 50) == 0:
             auc = calc_auc(stored_arr)
             print("iter", iteration)
             print("auc------------------", auc)
-            print("loss-----------------", loss_sum / 10)
-            loss_arr.append(loss_sum / 10)
+            print("loss-----------------", loss_sum / 50)
+            loss_arr.append(loss_sum / 50)
             auc_arr.append(auc)
             stored_arr = []
             loss_sum = 0.
@@ -85,7 +85,7 @@ def trainning(model, train_data_loader, device, opt):
     return loss_arr, auc_arr
 
 
-def evaluating(model, test_loader, device, user_idx):
+def evaluating(model, test_loader, device):
 
     model.eval()
     loss_sum = 0.
@@ -119,14 +119,14 @@ def evaluating(model, test_loader, device, user_idx):
 def run(batch_size, eb_size, device):
 
     trainDataset = PolyvoreDataset('./data/train.csv')
-    train_loader = DataLoader(trainDataset, batch_size=batch_size*len(device_ids), shuffle=True, drop_last=True, num_workers=6)
+    train_loader = DataLoader(trainDataset, batch_size=batch_size*len(device_ids), shuffle=True, drop_last=True, num_workers=8)
 
     testDataset = PolyvoreDataset('./data/test.csv')
-    test_loader = DataLoader(testDataset, batch_size=batch_size*len(device_ids), shuffle=False, num_workers=6)
+    test_loader = DataLoader(testDataset, batch_size=batch_size*len(device_ids), shuffle=False, num_workers=8)
 
     try:
         print("loading model")
-        dmr = torch.load(my_config['model_file'], map_location=lambda x,y: x.cuda(2))
+        dmr = torch.load(my_config['model_file'], map_location=lambda x,y: x.cuda(0))
     except Exception as e:
         print(e)
         print('no module exists, created new one {}'.format(my_config['model_file']))
@@ -142,7 +142,7 @@ def run(batch_size, eb_size, device):
         }
     ])
     '''
-    opt = torch.optim.SGD(dmr.parameters(), lr=0.001, momentum=0.9)
+    opt = torch.optim.SGD(dmr.parameters(), lr=0.001, momentum=0.9, weight_decay=1e-6)
 
     all_auc = []
     for i in range(60):
@@ -163,7 +163,7 @@ def run(batch_size, eb_size, device):
 if __name__ == "__main__":
 
     # "cpu" or "cuda:x" x is GPU index like (0,1,2,3,)
-    run(batch_size = 6, eb_size = 128, device = device_ids[0])
+    run(batch_size = 8, eb_size = 128, device = device_ids[0])
     print('ffff')
 
 
