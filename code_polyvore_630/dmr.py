@@ -153,7 +153,7 @@ class DMR(Module):
         his_t = []
         for out in user_his:
             out_v, out_t = out
-            out_v_feat = [self.features(x) for x in out_v]
+            out_v_feat = [self.features(x) for x in out_v]  # get visual feature of outfit, there are three items in an outfit.
             out_v_latent = [self.visual(x) for x in out_v_feat]
             out_t_latent = [self.text(x) for x in out_t]
             out_v_latent = torch.stack(out_v_latent, dim=1)
