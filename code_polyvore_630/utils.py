@@ -171,8 +171,11 @@ class PolyvoreDataset(Dataset):
     def __init__(self, path):
         self.list_fmt = "image_list_{}"
         image_list = read_image_list([os.path.join('../FHN/data/polyvore/tuples_630', self.list_fmt.format(p)) for p in ['top', 'bottom', 'shoe']])
+        # 由于train.csv中的top,bottom,shoe都是以图片id的形式表示的，通过image_list得到图片id与图片名称的对应关系，image_list[c][n]表示第c类种第n张图片的名称。
         semantic = load_semantic_data("../FHN/data/polyvore/sentence_vector/semantic.pkl")
+        # 读取item的文本特征，N*D，N个item,文本特征为D维，2400维
         lmdb_env = open_lmdb("../FHN/data/polyvore/images/lmdb")
+        # lmdb格式将每张图片预先读取，以291*291*3的三通道矩阵存储，如果不用lmdb，将lmdb_env=None, load_image方法中会读取原始图片
         self.datum = Datum(
             image_list,
             variable_length=False,
@@ -184,7 +187,9 @@ class PolyvoreDataset(Dataset):
         )
         self.image_list = image_list
         self.user_his = np.array(pd.read_csv('./data/u_pre.csv', header=None, usecols=[2, 3, 4], dtype=np.int)).reshape(-1,50,3)
+        # 读取用户历史数据,630个用户，每个用户50条，[630*50,3]reshape为[630,50,3]
         self.data_tpl = np.array(pd.read_csv(path, header=None, usecols=[1, 2, 3, 4, 5], dtype=np.int))
+        # 读取train.csv或test.csv，[N,5],N为样本数量，5维分别为user,top,bottom,shoe,target
         self.uidxs = self.data_tpl[:, 0]
         self.outfit = self.data_tpl[:, 1:-1]
         self.target = self.data_tpl[:, -1]
